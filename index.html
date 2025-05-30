@@ -5,16 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>마우스 이동 벡터 분석</title>
     <style>
-        canvas { border: 1px solid black; } /* 캔버스 테두리 */
-        #controls { margin-bottom: 10px; }  /* 버튼 여백 */
+        canvas { 
+            border: 1px solid black; 
+            margin-top: 20px; /* 캔버스 위쪽 여백 추가 */
+        }
+        #controls {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between; /* 양쪽 끝으로 배치 */
+            align-items: center; /* 세로 중앙 정렬 */
+            position: absolute;
+            width: 100%;
+            top: 50px; /* 시작 위치를 위쪽으로 조정 */
+        }
         #vectorInfo {
             position: absolute;
-            top: 10px;
+            top: 95px; /* 벡터 정보 영역 위치 조정 */
             right: 20px;
             background: white;
-            padding: 5px;
+            padding: 10px;
             border: 1px solid black;
-            width: 240px;
+            width: 260px; /* 너비를 늘려서 정보를 더 잘 보여줌 */
+            max-height: 480px; /* 벡터 정보가 너무 길어지지 않도록 설정 */
+            overflow-y: auto; /* 세로 스크롤 가능하게 함 */
         }
         table {
             width: 100%;
@@ -33,9 +46,25 @@
             margin: 5px;
         }
         #tableContainer {
-            max-height: 550px;
-            overflow-y: auto;
-        } /* 표를 넘치면 스크롤 되게 함 */
+            max-height: 415px; /* 표 높이를 제한 */
+            overflow-y: auto; /* 넘치면 스크롤 */
+        }
+        #speedDirectionInfo {
+            margin-top: 0;
+            font-size: 16px;
+            display: inline; /* 한 줄로 배치 */
+        }
+        #speedDirectionWrapper {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            width: 100%;
+        }
+        #buttonWrapper {
+            display: flex;
+            align-items: center;
+            width: 50%;
+        }
     </style>
 </head>
 <body>
@@ -43,8 +72,15 @@
 
     <!-- 시작 / 종료 버튼 -->
     <div id="controls">
-        <button id="startBtn">시작</button>
-        <button id="stopBtn">종료</button>
+        <div id="speedDirectionWrapper">
+            <p id="speedDirectionInfo">
+                속도: 0 m/s | 방향: 0°
+            </p>
+        </div>
+        <div id="buttonWrapper">
+            <button id="startBtn">시작</button>
+            <button id="stopBtn">종료</button>
+        </div>
     </div>
 
     <!-- 마우스 경로를 그릴 캔버스 -->
@@ -77,6 +113,7 @@
     const vectorTableBody = document.getElementById('vectorTableBody');
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
+    const speedDirectionInfo = document.getElementById('speedDirectionInfo');
 
     // 변수 초기화
     let points = [];          // 마우스 좌표들 저장
@@ -112,6 +149,7 @@
                 lastTime = now;
                 draw(); // 경로 및 벡터 그리기
                 updateVectorTable(); // 표 갱신
+                updateSpeedDirection(); // 속도 및 방향 갱신
             }
         }
     });
@@ -191,6 +229,26 @@
                 row.style.backgroundColor = dist < 20 ? "#ffcccb" : ""; // 가까우면 색 변경
             }
         });
+    }
+
+    // 속도와 방향 업데이트
+    function updateSpeedDirection() {
+        if (points.length < 2) return;
+
+        let p1 = points[points.length - 2]; // 이전 위치
+        let p2 = points[points.length - 1]; // 현재 위치
+
+        let dx = p2.x - p1.x;
+        let dy = p2.y - p1.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        let timeDifference = (p2.time - p1.time) / 1000; // 시간 차이를 초 단위로 변환
+        let speed = distance / timeDifference; // 속도 계산 (m/s)
+
+        // 방향 계산 (degrees)
+        let direction = Math.atan2(dy, dx) * 180 / Math.PI;
+
+        // 정보 업데이트
+        speedDirectionInfo.innerHTML = `속도: ${speed.toFixed(2)} m/s | 방향: ${direction.toFixed(2)}°`;
     }
     </script>
 </body>
