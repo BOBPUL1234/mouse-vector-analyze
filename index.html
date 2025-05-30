@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마우스 이동 벡터 분석</title>
+    <style>
+        canvas { border: 1px solid black; } /* 캔버스 테두리 */
+        #controls { margin-bottom: 10px; }  /* 버튼 여백 */
+        #vectorInfo {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background: white;
+            padding: 5px;
+            border: 1px solid black;
+            width: 240px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 5px;
+            text-align: center;
+        }
+        th {
+            background: #f0f0f0;
+        }
+        button {
+            padding: 5px 10px;
+            margin: 5px;
+        }
+        #tableContainer {
+            max-height: 550px;
+            overflow-y: auto;
+        } /* 표를 넘치면 스크롤 되게 함 */
+    </style>
+</head>
+<body>
+    <h2>마우스 이동 실험 (벡터 분석)</h2>
+
+    <!-- 시작 / 종료 버튼 -->
+    <div id="controls">
+        <button id="startBtn">시작</button>
+        <button id="stopBtn">종료</button>
+    </div>
+
+    <!-- 마우스 경로를 그릴 캔버스 -->
+    <canvas id="canvas" width="800" height="500"></canvas>
+
+    <!-- 벡터 정보 출력 영역 -->
+    <div id="vectorInfo">
+        <h3>벡터 정보</h3>
+        <div id="tableContainer">
+            <table>
+                <thead>
+                    <tr>
+                        <th>벡터 번호</th>
+                        <th>길이</th>
+                        <th>시작 좌표 (x, y)</th>
+                        <th>끝 좌표 (x, y)</th>
+                    </tr>
+                </thead>
+                <tbody id="vectorTableBody"></tbody> <!-- 자바스크립트가 여기에 데이터 넣음 -->
+            </table>
+        </div>
+    </div>
+
+    <script>
+    // 캔버스 및 컨텍스트 설정
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // 벡터 표와 버튼
+    const vectorTableBody = document.getElementById('vectorTableBody');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+
+    // 변수 초기화
+    let points = [];          // 마우스 좌표들 저장
+    let tracking = false;     // 추적 상태
+    let interval = 100;       // 위치 기록 간격 (ms)
+    let lastTime = 0;         // 마지막으로 기록한 시간
+
+    // [시작 버튼] 클릭 시
+    startBtn.addEventListener('click', () => {
+        points = []; // 데이터 초기화
+        tracking = true; // 추적 시작
+        ctx.clearRect(0, 0, canvas.width, canvas.height); // 캔버스 초기화
+        vectorTableBody.innerHTML = ""; // 표 초기화
+    });
+
+    // [종료 버튼] 클릭 시
+    stopBtn.addEventListener('click', () => {
+        tracking = false; // 추적 종료
+    });
+
+    // 마우스 이동 이벤트
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect(); // 캔버스 위치 보정
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        if (!tracking) {
+            highlightVector(mouseX, mouseY); // 추적 중이 아닐 때 벡터 강조
+        } else {
+            const now = Date.now(); // 현재 시간
+            if (now - lastTime >= interval) { // 일정 시간마다 위치 저장
+                points.push({ x: mouseX, y: mouseY, time: now });
+                lastTime = now;
+                draw(); // 경로 및 벡터 그리기
+                updateVectorTable(); // 표 갱신
+            }
+        }
+    });
+
+    // 마우스 경로와 벡터 그리기
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height); // 초기화
+        ctx.beginPath();
+        for (let i = 0; i < points.length - 1; i++) {
+            let p1 = points[i];
+            let p2 = points[i + 1];
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y); // 선분 그리기
+        }
+        ctx.strokeStyle = 'blue';
+        ctx.stroke();
+
+        // 벡터 화살표 추가
+        for (let i = 0; i < points.length - 1; i++) {
+            let p1 = points[i];
+            let p2 = points[i + 1];
+            let dx = p2.x - p1.x;
+            let dy = p2.y - p1.y;
+            drawArrow(p1.x, p1.y, dx, dy);
+        }
+    }
+
+    // 벡터(화살표) 그리기 함수
+    function drawArrow(x, y, dx, dy) {
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const headLen = 10; // 화살표 머리 길이
+        const angle = Math.atan2(dy, dx); // 각도 계산
+
+        // 본체
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + dx, y + dy);
+        ctx.strokeStyle = 'red';
+        ctx.stroke();
+
+        // 머리 그리기
+        ctx.beginPath();
+        ctx.moveTo(x + dx, y + dy);
+        ctx.lineTo(x + dx - headLen * Math.cos(angle - Math.PI / 6), y + dy - headLen * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(x + dx - headLen * Math.cos(angle + Math.PI / 6), y + dy - headLen * Math.sin(angle + Math.PI / 6));
+        ctx.lineTo(x + dx, y + dy);
+        ctx.fillStyle = 'red';
+        ctx.fill();
+    }
+
+    // 표 갱신 함수
+    function updateVectorTable() {
+        vectorTableBody.innerHTML = "";
+        for (let i = 0; i < points.length - 1; i++) {
+            let p1 = points[i];
+            let p2 = points[i + 1];
+            let dx = p2.x - p1.x;
+            let dy = p2.y - p1.y;
+            let length = Math.sqrt(dx * dx + dy * dy); // 벡터 길이
+
+            // 표 행 생성
+            let row = document.createElement("tr");
+            row.innerHTML = `<td>${i + 1}</td>
+                             <td>${length.toFixed(2)}</td>
+                             <td>(${p1.x.toFixed(1)}, ${p1.y.toFixed(1)})</td>
+                             <td>(${p2.x.toFixed(1)}, ${p2.y.toFixed(1)})</td>`;
+            vectorTableBody.appendChild(row);
+        }
+    }
+
+    // 마우스를 벡터 근처에 올리면 강조
+    function highlightVector(mouseX, mouseY) {
+        vectorTableBody.childNodes.forEach((row, index) => {
+            if (index < points.length - 1) {
+                let p1 = points[index];
+                let dist = Math.abs(mouseX - p1.x) + Math.abs(mouseY - p1.y);
+                row.style.backgroundColor = dist < 20 ? "#ffcccb" : ""; // 가까우면 색 변경
+            }
+        });
+    }
+    </script>
+</body>
+</html>
